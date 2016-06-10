@@ -2,11 +2,7 @@ import sbt.{Logger, Level}
 
 import collection.mutable.ListBuffer
 
-object GradingFeedback {
-  var value: GradingFeedback = null;
-}
-
-class GradingFeedback(maxScore: Double, styleScoreRatio: Double) {
+class GradingFeedback {
 
   def maxTestScore = maxScore * (1 - styleScoreRatio)
 
@@ -99,6 +95,14 @@ class GradingFeedback(maxScore: Double, styleScoreRatio: Double) {
     addDetails("======== FAILURES WHILE EXTRACTING THE SUBMISSION ========")
     addDetails(log)
   }
+
+  def setMaxScore(newMaxScore: Double, newStyleScoreRatio: Double): Unit = {
+    maxScore = newMaxScore
+    styleScoreRatio = newStyleScoreRatio
+  }
+
+  private var maxScore: Double = _
+  private var styleScoreRatio: Double = _
 
   private var vTestScore: Double = 0d
   private var vStyleScore: Double = 0d

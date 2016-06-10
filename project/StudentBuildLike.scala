@@ -20,15 +20,12 @@ class StudentBuildLike protected() extends CommonBuild {
     course := "",
     assignment := "",
     submitSetting,
+    submitLocalSetting,
     commonSourcePackages := Seq(), // see build.sbt
     courseId := "",
     styleCheckSetting,
-    libraryDependencies += "ch.epfl.lamp" % "scala-grading-runtime_2.11" % "0.3"
+    libraryDependencies += scalaTestDependency
   ).settings(packageSubmissionFiles: _*)
-
-
-  //TODOs
-  //- handle 400s coursera error codes
 
   /** **********************************************************
     * SUBMITTING A SOLUTION TO COURSERA
@@ -36,18 +33,80 @@ class StudentBuildLike protected() extends CommonBuild {
 
   val packageSubmission = TaskKey[File]("packageSubmission")
 
+  val sourceMappingsWithoutPackages =
+    (scalaSource, commonSourcePackages, unmanagedSources, unmanagedSourceDirectories, baseDirectory, compile in Test) map { (scalaSource, commonSourcePackages, srcs, sdirs, base, _) =>
+      val allFiles = srcs --- sdirs --- base
+      val commonSourcePaths = commonSourcePackages.map(scalaSource / _).map(_.getPath)
+      val withoutCommonSources = allFiles.filter(f => !commonSourcePaths.exists(f.getPath.startsWith))
+      withoutCommonSources pair (relativeTo(sdirs) | relativeTo(base) | flat)
+    }
+
   val packageSubmissionFiles = {
-    // the packageSrc task uses Defaults.packageSrcMappings, which is defined as concatMappings(resourceMappings, sourceMappings)
-    // in the packageSubmission task we only use the sources, not the resources.
-    inConfig(Compile)(Defaults.packageTaskSettings(packageSubmission, Defaults.sourceMappings))
+    // in the packageSubmission task we only use the sources of the assignment and not the common sources. We also do not package resources.
+    inConfig(Compile)(Defaults.packageTaskSettings(packageSubmission, sourceMappingsWithoutPackages))
+  }
+
+  /** Check that the jar exists, isn't empty, isn't crazy big, and can be read
+    * If so, encode jar as base64 so we can send it to Coursera
+    */
+  def prepareJar(jar: File, s: TaskStreams): String = {
+    val errPrefix = "Error submitting assignment jar: "
+    val fileLength = jar.length()
+    if (!jar.exists()) {
+      s.log.error(errPrefix + "jar archive does not exist\n" + jar.getAbsolutePath)
+      failSubmit()
+    } else if (fileLength == 0L) {
+      s.log.error(errPrefix + "jar archive is empty\n" + jar.getAbsolutePath)
+      failSubmit()
+    } else if (fileLength > maxSubmitFileSize) {
+      s.log.error(errPrefix + "jar archive is too big. Allowed size: " +
+        maxSubmitFileSize + " bytes, found " + fileLength + " bytes.\n" +
+        jar.getAbsolutePath)
+      failSubmit()
+    } else {
+      val bytes = new Array[Byte](fileLength.toInt)
+      val sizeRead = try {
+        val is = new FileInputStream(jar)
+        val read = is.read(bytes)
+        is.close()
+        read
+      } catch {
+        case ex: IOException =>
+          s.log.error(errPrefix + "failed to read sources jar archive\n" + ex.toString)
+          failSubmit()
+      }
+      if (sizeRead != bytes.length) {
+        s.log.error(errPrefix + "failed to read the sources jar archive, size read: " + sizeRead)
+        failSubmit()
+      } else encodeBase64(bytes)
+    }
+  }
+
+  /** Task to submit solution locally to a given file path */
+  val submitLocal = inputKey[Unit]("submit local to a given file path")
+  lazy val submitLocalSetting = submitLocal := {
+    val args: Seq[String] = Def.spaceDelimited("<arg>").parsed
+    val s: TaskStreams = streams.value // for logging
+    val jar = (packageSubmission in Compile).value
+
+    val base64Jar = prepareJar(jar, s)
+    args match {
+      case path :: Nil =>
+        scala.tools.nsc.io.File(path).writeAll(base64Jar)
+      case _ =>
+        val inputErr =
+          s"""|Invalid input to `submitLocal`. The required syntax for `submitLocal` is:
+              |submitLocal <path>
+          """.stripMargin
+        s.log.error(inputErr)
+        failSubmit()
+    }
   }
 
   /** Task to submit a solution to coursera */
   val submit = inputKey[Unit]("submit")
-
   lazy val submitSetting = submit := {
     val args: Seq[String] = Def.spaceDelimited("<arg>").parsed
-    val (_, _) = (clean.value, (compile in Compile).value) // depends on clean & compile task
     val s: TaskStreams = streams.value // for logging
     val jar = (packageSubmission in Compile).value
 
@@ -74,43 +133,7 @@ class StudentBuildLike protected() extends CommonBuild {
         failSubmit()
     }
 
-    /** Check that the jar exists, isn't empty, isn't crazy big, and can be read
-      * If so, encode jar as base64 so we can send it to Coursera
-      */
-    def prepareJar(jar: File): String = {
-      val errPrefix = "Error submitting assignment jar: "
-      val fileLength = jar.length()
-      if (!jar.exists()) {
-        s.log.error(errPrefix + "jar archive does not exist\n" + jar.getAbsolutePath)
-        failSubmit()
-      } else if (fileLength == 0L) {
-        s.log.error(errPrefix + "jar archive is empty\n" + jar.getAbsolutePath)
-        failSubmit()
-      } else if (fileLength > maxSubmitFileSize) {
-        s.log.error(errPrefix + "jar archive is too big. Allowed size: " +
-          maxSubmitFileSize + " bytes, found " + fileLength + " bytes.\n" +
-          jar.getAbsolutePath)
-        failSubmit()
-      } else {
-        val bytes = new Array[Byte](fileLength.toInt)
-        val sizeRead = try {
-          val is = new FileInputStream(jar)
-          val read = is.read(bytes)
-          is.close()
-          read
-        } catch {
-          case ex: IOException =>
-            s.log.error(errPrefix + "failed to read sources jar archive\n" + ex.toString)
-            failSubmit()
-        }
-        if (sizeRead != bytes.length) {
-          s.log.error(errPrefix + "failed to read the sources jar archive, size read: " + sizeRead)
-          failSubmit()
-        } else encodeBase64(bytes)
-      }
-    }
-
-    val base64Jar = prepareJar(jar)
+    val base64Jar = prepareJar(jar, s)
     val json =
       s"""|{
           |   "assignmentKey":"$assignmentKey",

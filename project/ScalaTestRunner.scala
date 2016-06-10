@@ -71,18 +71,17 @@ object ScalaTestRunner {
 
   private def runPathString(file: File) = file.getAbsolutePath.replace(" ", "\\ ")
 
-  private def invokeScalaTestInSeparateProcess(scalaTestCommand: List[String], logError: String => Unit): String = {
+  private def invokeScalaTestInSeparateProcess(scalaTestCommand: List[String], logError: String => Unit, timeout: Int): String = {
     val out = new LimitedStringBuffer()
     var proc: SysProc = null
     try {
       proc = SysProc(scalaTestCommand).run(ProcessLogger(out.append, out.append))
-      forkProcess(proc, Settings.scalaTestTimeout)
+      forkProcess(proc, timeout)
     } catch {
       case e: TimeoutException =>
         val msg = "Timeout when running ScalaTest\n" + out.toString()
         logError(msg)
         proc.destroy()
-        sys.error(msg)
       case e: Throwable =>
         val msg = "Error occurred while running the ScalaTest command\n" + e.toString + "\n" + out.toString()
         logError(msg)
@@ -95,11 +94,10 @@ object ScalaTestRunner {
       }
     }
 
-    val runLog = out.toString
-    runLog
+    out.toString
   }
 
-  private def inovkeSummaryProcess(outFilePath: String, classpathString: String, logError: String => Unit): String = {
+  private def computeSummary(outFilePath: String, classpathString: String, logError: String => Unit): String = {
     val summaryFilePath = outFilePath + ".summary"
     val summaryCmd = "java" ::
       "-cp" :: classpathString ::
@@ -128,16 +126,18 @@ object ScalaTestRunner {
   }
 
   def runScalaTest(classpath: Classpath, testClasses: File, outfile: File,
-                   resourceFiles: List[File], javaSystemProperties: Traversable[(String, String)],
-                   logError: String => Unit) = {
+                   resourceFiles: List[File], gradeOptions: Map[String, String],
+                   logError: String => Unit, instragentPath: String) = {
 
     // invoke scalatest in the separate process
     val classpathString = classpath map { case Attributed(file) => file.getAbsolutePath } mkString ":"
-    val cmd = scalaTestCommand(testClasses, outfile, resourceFiles, javaSystemProperties, classpathString)
-    val runLog = invokeScalaTestInSeparateProcess(cmd, logError)
+    val cmd = scalaTestCommand(testClasses, outfile, resourceFiles, gradeOptions, classpathString, instragentPath)
+
+    val timeout = gradeOptions.getOrElse("totalTimeout", Settings.scalaTestTimeout.toString).toInt
+    val runLog = invokeScalaTestInSeparateProcess(cmd, logError, timeout)
 
     // compute the summary
-    val summaryFilePath = inovkeSummaryProcess(outfile.getAbsolutePath, classpathString, logError)
+    val summaryFilePath = computeSummary(outfile.getAbsolutePath, classpathString, logError)
     val summary = unpickleSummary(logError, runLog, summaryFilePath)
 
     // cleanup all the files
@@ -157,7 +157,8 @@ object ScalaTestRunner {
     }
   }
 
-  private def scalaTestCommand(testClasses: File, outfile: File, resourceFiles: List[File], javaSystemProperties: Traversable[(String, String)], classpathString: String): List[String] = {
+  private def scalaTestCommand(testClasses: File, outfile: File, resourceFiles: List[File], gradeOptions: Map[String, String], classpathString: String,
+                               instragentPath: String): List[String] = {
     val testRunPath = runPathString(testClasses)
     val resourceFilesString = resourceFiles.map(_.getAbsolutePath).mkString(":")
     // Deleting the file is helpful: it makes reading the file below crash in case ScalaTest doesn't
@@ -167,14 +168,23 @@ object ScalaTestRunner {
 
     def prop(name: String, value: String) = "-D" + name + "=" + value
 
+    // grade options
+    val xmx = gradeOptions.get("Xmx").map("-Xmx" + _).getOrElse("-Xmx256m")
+    val xms = gradeOptions.get("Xms").map("-Xms" + _).getOrElse("-Xms10m")
+    val timeoutPerTest = gradeOptions.getOrElse("individualTimeout", Settings.individualTestTimeout.toString)
+
     // we don't specify "-w packageToTest" - the build file only compiles the tests
     // for the current project. so we don't need to do it again here.
+
+    // NOTICE: DON'T start test in parallel, it would break profiling. Check the
+    // implementation of @InstrumentedSuite for more details.
     "java" ::
+      xmx :: xms ::
+      s"-javaagent:$instragentPath" ::
       prop(Settings.scalaTestReportFileProperty, outfile.getAbsolutePath) ::
-      prop(Settings.scalaTestIndividualTestTimeoutProperty, Settings.individualTestTimeout.toString) ::
+      prop(Settings.scalaTestIndividualTestTimeoutProperty, timeoutPerTest) ::
       prop(Settings.scalaTestReadableFilesProperty, resourceFilesString) ::
       prop(Settings.scalaTestDefaultWeightProperty, Settings.scalaTestDefaultWeight.toString) ::
-      javaSystemProperties.map((prop _).tupled).toList :::
       "-cp" :: classpathString ::
       "org.scalatest.tools.Runner" ::
       "-R" :: testRunPath ::
@@ -182,17 +192,26 @@ object ScalaTestRunner {
       Nil
   }
 
+  private def testEnv(options: Map[String, String]): String = {
+    val memory = options.get("Xmx").getOrElse("256m")
+    val timeout = options.get("totalTimeout").map(_.toInt).getOrElse(Settings.scalaTestTimeout)
+    val timeoutPerTest = options.get("individualTimeout").map(_.toInt).getOrElse(Settings.individualTestTimeout)
+
+    "======== TESTING ENVIRONMENT ========\n" +
+    s"Limits: memory: $memory,  total time: ${timeout}s,  per test case time: ${timeoutPerTest}s\n"
+  }
+
   def scalaTestGrade(gradingReporter: GradingFeedback, classpath: Classpath, testClasses: File, outfile: File,
-                     resourceFiles: List[File], javaSystemProperties: Traversable[(String, String)]): Unit = {
+                     resourceFiles: List[File], gradeOptions: Map[String, String], instragentPath: String): Unit = {
 
     val (score, maxScore, feedback, runLog) =
-      runScalaTest(classpath, testClasses, outfile, resourceFiles, javaSystemProperties, gradingReporter.testExecutionFailed)
+      runScalaTest(classpath, testClasses, outfile, resourceFiles, gradeOptions, gradingReporter.testExecutionFailed, instragentPath)
 
     if (score == maxScore) {
       gradingReporter.allTestsPassed()
     } else {
       val scaledScore = gradingReporter.maxTestScore * score / maxScore
-      gradingReporter.testsFailed(feedback, scaledScore)
+      gradingReporter.testsFailed(feedback + testEnv(gradeOptions), scaledScore)
     }
 
     if (!runLog.isEmpty) {

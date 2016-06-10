@@ -2,7 +2,7 @@ package example
 
 import org.scalatest.FunSuite
 
-import ch.epfl.lamp.grading.GradingSuite
+//import ch.epfl.lamp.grading.GradingSuite
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 

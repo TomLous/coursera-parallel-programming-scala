@@ -7,9 +7,7 @@ scalacOptions ++= Seq("-deprecation")
 courseId := "GVy8tIIKEeWXmQ4F86nmrw"
 
 // grading libraries
-
 libraryDependencies += "junit" % "junit" % "4.10" % "test"
-libraryDependencies += "ch.epfl.lamp" %% "scala-grading-runtime" % "0.3"
 libraryDependencies ++= assignmentsMap.value.values.flatMap(_.dependencies).toSeq
 
 // include the common dir
@@ -53,6 +51,13 @@ assignmentsMap := {
       key = "UJmFEtoIEeWJwRKcpT8ChQ",
       itemId = "akLxD",
       partId = "mz8iL",
+      maxScore = 10d,
+      dependencies = depsCollections),
+    "barneshut" -> Assignment(
+      packageName = "barneshut",
+      key = "itfW99oJEeWXuxJgUJEB-Q",
+      itemId = "xGkV0",
+      partId = "ep95q",
       maxScore = 10d,
       dependencies = depsCollections)
   )
