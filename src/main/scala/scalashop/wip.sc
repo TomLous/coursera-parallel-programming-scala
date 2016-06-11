@@ -15,7 +15,7 @@ object test {
 //  val end = 15
 //  for(w <- from until end) yield w
 
-  val r =  Range(0,5) by 15/6
+  val r =  Range(0,5) by Math.max(1/24,1)
   val tasks = for(
     z <- r
   ) yield {
@@ -23,7 +23,7 @@ object test {
       r.sum
     }
   }
-  b.join()
+//  b.join()
 
 
   val w = 4
