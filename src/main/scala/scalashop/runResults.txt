@@ -1,0 +1,12 @@
+> runMain scalashop.VerticalBoxBlurRunner
+sequential blur time: 28930.99795119999 ms
+fork/join blur time: 9386.2060155 ms
+speedup: 3.0822888293123456
+[success] Total time: 573 s, completed Jun 11, 2016 10:26:49 PM
+
+> runMain scalashop.HorizontalBoxBlurRunner
+sequential blur time: 31848.198661699997 ms
+fork/join blur time: 10288.1240555 ms
+speedup: 3.095627394255034
+[success] Total time: 646 s, completed Jun 11, 2016 10:47:13 PM
+

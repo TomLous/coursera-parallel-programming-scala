@@ -1,15 +1,40 @@
-
+import common._
 
 import scalashop._
 
 
 object test {
-  val src = new Img(15, 15)
+//  val src = new Img(15, 15)
+//
+//  for (x <- 0 until 5; y <- 0 until 5)
+//    src(x, y) = rgba(x, y, x + y, math.abs(x - y))
 
-  for (x <- 0 until 5; y <- 0 until 5)
-    src(x, y) = rgba(x, y, x + y, math.abs(x - y))
+//  boxBlurKernel(src, 0, 0, 2)
 
-  boxBlurKernel(src, 0, 0, 2)
+//  val from = 10
+//  val end = 15
+//  for(w <- from until end) yield w
+
+  val r =  Range(0,5) by 15/6
+  val tasks = for(
+    z <- r
+  ) yield {
+    val b = task{
+      r.sum
+    }
+  }
+  b.join()
+
+
+  val w = 4
+  val h = 3
+  val src = new Img(w, h)
+  val dst = new Img(w, h)
+  src(0, 0) = 0; src(1, 0) = 1; src(2, 0) = 2; src(3, 0) = 9
+  src(0, 1) = 3; src(1, 1) = 4; src(2, 1) = 5; src(3, 1) = 10
+  src(0, 2) = 6; src(1, 2) = 7; src(2, 2) = 8; src(3, 2) = 11
+
+  blur(src, dst, 0, 4, 2)
 
   def boxBlurKernel(src: Img, x: Int, y: Int, radius: Int) = {
 
@@ -32,21 +57,20 @@ object test {
     )
 
 
-    //    pixels.map[(Int,Int)]((x,y)=>{
-    //
-    //    })
-//
-//    val sum = pixels.unzip match {case(r,g,b,a) => {
-//      (a)
-//        }}
-//
-// sum
+  }
 
-    //pixels.foldLeft((0,0,0,0),0){ case (sum, next) => ((sum._1 + next._1, sum._2 + next._2, sum._3 + next._3, sum._4 + next._2), 1) }
+  def blur(src: Img, dst: Img, from: Int, end: Int, radius: Int): Unit = {
+    // TODO implement this method using the `boxBlurKernel` method
+    for(
+      x <- from until end;
+      y <- 0 until src.height;
+      if x >= 0 && x < src.width
+    ) yield {
 
-    //
-
-
+      println(x +", " + y + " = "+ src(x,y) + " => " + boxBlurKernel(src, x, y, radius))
+      dst.update(x, y,  boxBlurKernel(src, x, y, radius))
+    }
+    dst
   }
 
 

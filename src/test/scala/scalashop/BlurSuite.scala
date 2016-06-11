@@ -71,6 +71,7 @@ class BlurSuite extends FunSuite {
 
     VerticalBoxBlur.blur(src, dst, 0, 4, 2)
 
+
     def check(x: Int, y: Int, expected: Int) =
       assert(dst(x, y) == expected,
         s"(destination($x, $y) should be $expected)")
@@ -87,6 +88,8 @@ class BlurSuite extends FunSuite {
     check(1, 2, 5)
     check(2, 2, 5)
     check(3, 2, 6)
+
+
   }
 
 
