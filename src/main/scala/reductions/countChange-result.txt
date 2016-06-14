@@ -1,0 +1,18 @@
+> runMain reductions.ParallelCountChangeRunner
+
+sequential result = 177863
+sequential count time: 64.98515082499998 ms
+
+parallel result = 177863
+parallel count time: 19.62264665 ms
+speedup: 3.3117423956161374
+
+parallel result = 177863
+parallel count time: 17.183560900000003 ms
+speedup: 3.781820962673689
+
+parallel result = 177863
+parallel count time: 20.8402145625 ms
+speedup: 3.1182572823378996
+
+
