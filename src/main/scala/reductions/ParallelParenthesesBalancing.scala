@@ -10,17 +10,18 @@ object ParallelParenthesesBalancingRunner {
 
   @volatile var parResult = false
 
+  // changed values because it took too long
   val standardConfig = config(
-    Key.exec.minWarmupRuns -> 40,
-    Key.exec.maxWarmupRuns -> 80,
-    Key.exec.benchRuns -> 120,
+    Key.exec.minWarmupRuns -> 10, // was 40
+    Key.exec.maxWarmupRuns -> 20, // was 80
+    Key.exec.benchRuns -> 20, // was 120
     Key.verbose -> true
   ) withWarmer (new Warmer.Default)
 
   def main(args: Array[String]): Unit = {
-    val length = 100000000
+    val length = 100000 // was +0000
     val chars = new Array[Char](length)
-    val threshold = 10000
+    val threshold = 100 // was +000
     val seqtime = standardConfig measure {
       seqResult = ParallelParenthesesBalancing.balance(chars)
     }
