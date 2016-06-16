@@ -1,0 +1,8 @@
+> runMain reductions.LineOfSightRunner
+
+sequential time: 1981.4116318000001 ms
+
+parallel time: 126.14727969999998 ms
+speedup: 15.707129289764625
+
+
