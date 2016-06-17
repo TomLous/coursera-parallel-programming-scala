@@ -1,2 +1,2 @@
 course := "parprog1"
-assignment := "reductions"
+assignment := "kmeans"
