@@ -1,0 +1,45 @@
+Your overall score for this assignment is 9.33 out of 10.00
+
+
+The code you submitted did not pass all of our tests: your submission achieved a score of
+9.33 out of 10.00 in our tests.
+
+In order to find bugs in your code, we advise to perform the following steps:
+ - Take a close look at the test output that you can find below: it should point you to
+   the part of your code that has bugs.
+ - Run the tests that we provide with the handout on your code.
+ - The tests we provide do not test your code in depth: they are very incomplete. In order
+   to test more aspects of your code, write your own unit tests.
+ - Take another very careful look at the assignment description. Try to find out if you
+   misunderstood parts of it. While reading through the assignment, write more tests.
+
+Below you can find a short feedback for every individual test that failed.
+
+======== LOG OF FAILED TESTS ========
+Your solution achieved a testing score of 140 out of 150.
+
+Below you can see a short feedback for every test that failed,
+indicating the reason for the test failure and how many points
+you lost for each individual test.
+
+Tests that were aborted took too long too complete or crashed the
+JVM. Such crashes can arise due to infinite non-terminitaing
+loops or recursion (StackOverflowException) or excessive memory
+consumption (OutOfMemoryException).
+
+[Test Description] parLineOfSight should invoke the parallel construct 30 times (15 times during upsweep and 15 times during downsweep) for an array of size 17, with threshold 1
+[Observed Error] 32 did not equal 30 (The number of parallel calls should be 30)
+[Lost Points] 3
+
+[Test Description] parLineOfSight should call parallel constuct 6 times, where the last two parallel constructs should update the 4 sections of the array (1 until 5), (5 until 9), (9 until 13), (13 until 17), respectively
+[Observed Error] success was false [During the execution of first part of 5th call to parallel construct, the indices 1 until 5 of the output array was not correctly updated]
+[Lost Points] 6
+
+[Test Description] combinedThreshold should return true when the number of coins times money is less than or equal to half of the initial number of coins times starting money
+[Observed Error] false did not equal true combinedThreshold should return true
+[Lost Points] 1
+
+======== TESTING ENVIRONMENT ========
+Limits: memory: 256m,  total time: 850s,  per test case time: 240s
+
+
