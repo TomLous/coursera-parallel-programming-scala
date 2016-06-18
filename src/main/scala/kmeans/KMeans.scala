@@ -6,6 +6,8 @@ import scala.util.Random
 import org.scalameter._
 import common._
 
+import scala.collection.concurrent.TrieMap
+
 class KMeans {
 
   def generatePoints(k: Int, num: Int): Seq[Point] = {
@@ -42,8 +44,13 @@ class KMeans {
     closest
   }
 
-  def classify(points: GenSeq[Point], means: GenSeq[Point]): GenMap[Point, GenSeq[Point]] = {
-    ???
+
+
+  def classify(points: GenSeq[Point], means: GenSeq[Point]):GenMap[Point, GenSeq[Point]] = {
+    // group each point by the mean. Should be enough, but needs to return empty lists for unused means
+    val pointsMeanMap = points.par.groupBy(findClosest(_, means))
+    // So iterate over means get (empty) list and return map
+    means.par.map(mean => mean -> pointsMeanMap.getOrElse(mean, GenSeq())).toMap
   }
 
   def findAverage(oldMean: Point, points: GenSeq[Point]): Point = if (points.length == 0) oldMean else {
@@ -59,16 +66,23 @@ class KMeans {
   }
 
   def update(classified: GenMap[Point, GenSeq[Point]], oldMeans: GenSeq[Point]): GenSeq[Point] = {
-    ???
+    oldMeans.par.map(oldMean => findAverage(oldMean, classified(oldMean)))
   }
 
+
+
   def converged(eta: Double)(oldMeans: GenSeq[Point], newMeans: GenSeq[Point]): Boolean = {
-    ???
+    (oldMeans zip newMeans).forall{
+      case (oldMean, newMean) => oldMean.squareDistance(newMean) <=  eta
+    }
   }
 
   @tailrec
   final def kMeans(points: GenSeq[Point], means: GenSeq[Point], eta: Double): GenSeq[Point] = {
-    if (???) kMeans(???, ???, ???) else ??? // your implementation need to be tail recursive
+    val classified = classify(points, means)
+    val newMeans = update(classified, means)
+
+    if (!converged(eta)(means, newMeans)) kMeans(points, newMeans, eta) else newMeans // your implementation need to be tail recursive
   }
 }
 

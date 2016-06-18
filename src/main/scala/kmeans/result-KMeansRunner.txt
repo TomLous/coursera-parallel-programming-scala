@@ -1,0 +1,8 @@
+runMain kmeans.KMeansRunner
+
+sequential time: 91.79862900000002 ms
+
+parallel time: 82.61482236000002 ms
+speedup: 1.1111641516334794
+
+Process finished with exit code 0
