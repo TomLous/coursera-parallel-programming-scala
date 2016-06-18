@@ -26,7 +26,7 @@ class IndexedColorFilter(initialImage: Img,
   val means = initializeIndex(colorCount, points)
 
   /* The work is done here: */
-  private val newMeans = kMeans(points, means, 0.01)
+  private val newMeans = kMeans(points.par, means.par, 0.01)
 
   /* And these are the results exposed */
   def getStatus() = s"Converged after $steps steps."
