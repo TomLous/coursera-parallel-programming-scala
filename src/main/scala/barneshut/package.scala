@@ -206,6 +206,7 @@ package object barneshut {
     def apply(x: Int, y: Int) = matrix(y * sectorPrecision + x)
 
     def combine(that: SectorMatrix): SectorMatrix = {
+//      val x = matrix zip that.matrix map{case (a,b) => a.combine(b)}
       for (i <- 0 until matrix.length) matrix.update(i, matrix(i).combine(that.matrix(i)))
       this
     }
